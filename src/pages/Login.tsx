@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { TrendingUp, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const { signInWithGoogle, user, loading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, user, loading } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -20,6 +24,20 @@ const Login = () => {
     setIsSigningIn(true);
     try {
       await signInWithGoogle();
+    } catch (error) {
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      return;
+    }
+    
+    setIsSigningIn(true);
+    try {
+      await signInWithEmail(email, password);
     } catch (error) {
       setIsSigningIn(false);
     }
@@ -49,7 +67,7 @@ const Login = () => {
         </button>
 
         {/* Login card */}
-        <div className="glass-card p-8 rounded-3xl">
+        <div className="glass-card p-6 sm:p-8 rounded-3xl">
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center">
@@ -59,9 +77,9 @@ const Login = () => {
 
           {/* Title */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Bienvenido a FinTrack</h1>
-            <p className="text-muted-foreground">
-              Inicia sesión para comenzar a rastrear tus finanzas
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Accede a tu espacio financiero</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Inicia sesión o crea tu cuenta
             </p>
           </div>
 
@@ -70,16 +88,17 @@ const Login = () => {
             size="lg"
             onClick={handleGoogleSignIn}
             disabled={isSigningIn}
-            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-14 glow-primary"
+            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-12 sm:h-14 text-sm sm:text-base px-4 glow-primary"
           >
             {isSigningIn ? (
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Iniciando sesión...</span>
+                <span className="hidden sm:inline">Iniciando sesión...</span>
+                <span className="sm:hidden">Cargando...</span>
               </div>
             ) : (
               <>
-                <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 mr-2 sm:mr-3 flex-shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -97,10 +116,73 @@ const Login = () => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Continuar con Google
+                <span className="hidden sm:inline">Continuar con Google</span>
+                <span className="sm:hidden">Google</span>
               </>
             )}
           </Button>
+
+          <p className="text-xs sm:text-sm text-muted-foreground text-center mt-3">
+            Usa tu cuenta de Google para acceder
+          </p>
+
+          {/* Divider */}
+          <div className="relative my-6 sm:my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-xs sm:text-sm">
+              <span className="px-2 bg-card text-muted-foreground">o</span>
+            </div>
+          </div>
+
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailSignIn} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 sm:h-12 bg-input border-border text-sm sm:text-base"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 sm:h-12 bg-input border-border text-sm sm:text-base"
+                required
+                minLength={6}
+              />
+            </div>
+
+            <div className="text-right">
+              <a href="#" className="text-xs sm:text-sm text-primary hover:underline">
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSigningIn}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-11 sm:h-12 text-sm sm:text-base"
+            >
+              Iniciar sesión
+            </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Si no tienes cuenta, se creará automáticamente
+            </p>
+          </form>
 
           {/* Terms */}
           <p className="text-xs text-muted-foreground text-center mt-6">

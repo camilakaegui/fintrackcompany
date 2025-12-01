@@ -53,9 +53,10 @@ export const Navbar = () => {
           <div className="hidden md:block">
             <Button 
               onClick={() => navigate("/login")}
-              className="bg-primary hover:bg-primary/90 text-white font-medium px-6"
+              className="bg-primary hover:bg-primary/90 text-white font-medium px-4 sm:px-6 text-sm sm:text-base"
             >
-              Comenzar gratis
+              <span className="hidden sm:inline">Comenzar gratis</span>
+              <span className="sm:hidden">Empezar</span>
             </Button>
           </div>
 

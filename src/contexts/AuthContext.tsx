@@ -9,7 +9,6 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<{ error: any; isNewUser?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -114,51 +113,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const signInWithEmail = async (email: string, password: string) => {
-    try {
-      // Primero intentar login
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error && error.message.includes('Invalid login credentials')) {
-        // Si no existe, crear cuenta automáticamente
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`
-          }
-        });
-        
-        if (signUpError) {
-          console.error("Error creating account:", signUpError);
-          toast.error("Error al crear la cuenta. Intenta de nuevo.");
-          return { error: signUpError };
-        }
-        
-        console.log('✅ New account created:', email);
-        toast.success("Cuenta creada exitosamente. Bienvenido!");
-        return { error: null, isNewUser: true };
-      }
-      
-      if (error) {
-        console.error("Error signing in:", error);
-        toast.error("Error al iniciar sesión. Verifica tus credenciales.");
-        return { error };
-      }
-      
-      console.log('✅ Signed in with email:', email);
-      toast.success("Sesión iniciada exitosamente");
-      return { error: null };
-    } catch (error) {
-      console.error("Unexpected error:", error);
-      toast.error("Error inesperado. Por favor intenta de nuevo.");
-      return { error };
-    }
-  };
-
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -180,7 +134,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     session,
     loading,
     signInWithGoogle,
-    signInWithEmail,
     signOut,
   };
 

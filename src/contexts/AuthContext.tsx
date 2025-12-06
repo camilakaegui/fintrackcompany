@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
       
-      const redirectUrl = 'https://fintrackmakers.lovable.app/auth/callback';
+      const redirectUrl = 'https://fintrackcompany.lovable.app/auth/callback';
       console.log('Redirect URL:', redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({

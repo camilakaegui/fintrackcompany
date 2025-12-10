@@ -19,39 +19,41 @@ const STORAGE_KEY = 'fintrack_verification_code';
 export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: WhatsAppVerificationProps) => {
   const [step, setStep] = useState<WhatsAppStep>('LOADING');
   const [phone, setPhone] = useState('');
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [verifiedPhone, setVerifiedPhone] = useState('');
+  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasAutoVerified, setHasAutoVerified] = useState(false);
+
+  const fullPhoneNumber = phone.startsWith('+') ? phone : `+57${phone}`;
 
   // Load saved code from localStorage on mount
   useEffect(() => {
     const savedCode = localStorage.getItem(STORAGE_KEY);
-    if (savedCode && savedCode.length <= 6) {
-      const codeArray = savedCode.split('').concat(Array(6 - savedCode.length).fill(''));
-      setCode(codeArray);
+    if (savedCode) {
+      const savedDigits = savedCode.split('').slice(0, 6);
+      while (savedDigits.length < 6) {
+        savedDigits.push('');
+      }
+      setDigits(savedDigits);
     }
   }, []);
 
-  // Save code to localStorage when it changes
+  // Save digits to localStorage when they change
   useEffect(() => {
-    const fullCode = code.join('');
-    if (fullCode.length > 0) {
-      localStorage.setItem(STORAGE_KEY, fullCode);
+    const code = digits.join('');
+    if (code.length > 0) {
+      localStorage.setItem(STORAGE_KEY, code);
     }
-  }, [code]);
+  }, [digits]);
 
   // Auto-verify when 6 digits are entered
   useEffect(() => {
-    const fullCode = code.join('');
-    if (fullCode.length === 6 && !isVerifying && !hasAutoVerified && step === 'WAITING_CODE') {
-      setHasAutoVerified(true);
-      handleVerifyCode();
+    const code = digits.join('');
+    if (code.length === 6 && !isVerifying && step === 'WAITING_CODE') {
+      handleVerifyCode(code);
     }
-  }, [code, isVerifying, hasAutoVerified, step]);
-
-  const fullPhoneNumber = phone.startsWith('+') ? phone : `+57${phone}`;
+  }, [digits, isVerifying, step]);
 
   // Check for existing verification on mount
   useEffect(() => {
@@ -66,8 +68,12 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
         if (error) throw error;
         
         if (existing) {
+          // Always set the phone from the record
+          setPhone(existing.phone);
+          
           if (existing.is_verified) {
             // Already verified, complete this step
+            setVerifiedPhone(existing.phone);
             setStep('VERIFIED');
             setTimeout(() => onComplete(), 1500);
             return;
@@ -76,7 +82,6 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
           const expiresAt = new Date(existing.expires_at);
           if (expiresAt > new Date()) {
             // Code still valid, show code input screen
-            setPhone(existing.phone);
             setStep('WAITING_CODE');
             return;
           }
@@ -131,12 +136,8 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
   };
 
   // Verificar código usando RPC
-  const handleVerifyCode = async () => {
-    const fullCode = code.join('');
-    if (fullCode.length !== 6) {
-      setError('Ingresa el código de 6 dígitos');
-      return;
-    }
+  const handleVerifyCode = async (code: string) => {
+    if (code.length !== 6 || isVerifying) return;
 
     setIsVerifying(true);
     setError(null);
@@ -144,14 +145,14 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
     try {
       const { data, error: rpcError } = await supabase.rpc('verify_whatsapp_code', {
         p_user_id: userId,
-        p_code: fullCode
+        p_code: code
       });
 
       if (rpcError) throw rpcError;
 
       if (data?.success) {
-        // Clear localStorage on success
         localStorage.removeItem(STORAGE_KEY);
+        setVerifiedPhone(fullPhoneNumber);
         setStep('VERIFIED');
         toast.success('¡WhatsApp verificado!');
         setTimeout(() => onComplete(), 2000);
@@ -164,47 +165,40 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
         } else {
           setError(errorMsg);
         }
-        // Clear code and localStorage on failure
-        setCode(['', '', '', '', '', '']);
+        // Clear digits and localStorage on failure
+        setDigits(['', '', '', '', '', '']);
         localStorage.removeItem(STORAGE_KEY);
-        setHasAutoVerified(false);
-        // Focus first input
         setTimeout(() => document.getElementById('code-0')?.focus(), 100);
       }
     } catch (err) {
       console.error('Error:', err);
       setError('Error al verificar. Intenta de nuevo.');
-      setCode(['', '', '', '', '', '']);
+      setDigits(['', '', '', '', '', '']);
       localStorage.removeItem(STORAGE_KEY);
-      setHasAutoVerified(false);
     } finally {
       setIsVerifying(false);
     }
   };
 
   // Manejar input del código
-  const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) value = value[0];
-    if (!/^\d*$/.test(value)) return;
+  const handleDigitChange = (index: number, value: string) => {
+    // Solo aceptar un dígito numérico
+    if (value && !/^\d$/.test(value)) return;
 
-    const newCode = [...code];
-    newCode[index] = value;
-    setCode(newCode);
+    const newDigits = [...digits];
+    newDigits[index] = value;
+    setDigits(newDigits);
 
+    // Auto-focus al siguiente input
     if (value && index < 5) {
-      const nextInput = document.getElementById(`code-${index + 1}`);
-      nextInput?.focus();
+      document.getElementById(`code-${index + 1}`)?.focus();
     }
   };
 
   // Manejar backspace
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
-      const prevInput = document.getElementById(`code-${index - 1}`);
-      prevInput?.focus();
-    }
-    if (e.key === 'Enter' && code.join('').length === 6) {
-      handleVerifyCode();
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      document.getElementById(`code-${index - 1}`)?.focus();
     }
   };
 
@@ -353,7 +347,7 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
             
             {/* 6 inputs para el código */}
             <div className="flex justify-center gap-2">
-              {code.map((digit, index) => (
+              {digits.map((digit, index) => (
                 <input
                   key={index}
                   id={`code-${index}`}
@@ -361,7 +355,7 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
                   inputMode="numeric"
                   maxLength={1}
                   value={digit}
-                  onChange={(e) => handleCodeChange(index, e.target.value)}
+                  onChange={(e) => handleDigitChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   disabled={isVerifying}
                   className="w-12 h-14 text-center text-2xl font-bold bg-muted border-2 border-border rounded-lg text-foreground focus:border-[#25D366] focus:outline-none transition-colors disabled:opacity-50"
@@ -385,9 +379,8 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
             <button
               onClick={() => {
                 setStep('INPUT_PHONE');
-                setCode(['', '', '', '', '', '']);
+                setDigits(['', '', '', '', '', '']);
                 localStorage.removeItem(STORAGE_KEY);
-                setHasAutoVerified(false);
                 setError(null);
               }}
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
@@ -406,7 +399,7 @@ export const WhatsAppVerification = ({ userId, onComplete, onSkip, onBack }: Wha
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2">¡WhatsApp verificado!</h3>
           <p className="text-foreground font-medium text-lg">
-            {fullPhoneNumber}
+            {verifiedPhone || fullPhoneNumber}
           </p>
           <p className="text-muted-foreground text-sm mt-3">
             Recibirás notificaciones de tus transacciones en este número

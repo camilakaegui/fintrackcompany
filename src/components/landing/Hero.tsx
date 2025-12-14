@@ -28,7 +28,7 @@ export const Hero = () => {
             </div>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start">
               <Button
                 size="lg"
                 onClick={() => setShowWaitlist(true)}
@@ -39,12 +39,18 @@ export const Hero = () => {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/demo")}
                 className="border-border hover:bg-muted h-12 px-8"
               >
-                Ya tengo cuenta
+                Ver demo
               </Button>
             </div>
+
+            <p className="text-center sm:text-left mt-4">
+              <a href="/login" className="text-primary hover:underline text-sm">
+                Ya tengo cuenta → Iniciar sesión
+              </a>
+            </p>
 
             <p className="text-muted-foreground/70 text-sm text-center sm:text-left">
               🎉 Más de 500 personas en la lista de espera

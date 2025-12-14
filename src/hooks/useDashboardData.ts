@@ -53,17 +53,23 @@ export const useDashboardData = (selectedMonth?: Date) => {
   const { data: transactions, isLoading: loadingTransactions } = useQuery({
     queryKey: ['transactions', user?.id, startOfMonth.toISOString()],
     queryFn: async () => {
+      console.log('Fetching transactions for user:', user?.id);
+      console.log('Date range:', startOfMonth.toISOString(), 'to', endOfMonth.toISOString());
+      
       const { data, error } = await supabase
         .from('transactions')
         .select(`
           *,
-          categories (name, icon, color),
-          payment_providers (name)
+          categories:category_id (name, icon, color),
+          payment_providers:provider_id (name)
         `)
         .eq('user_id', user?.id)
         .gte('transaction_date', startOfMonth.toISOString())
         .lte('transaction_date', endOfMonth.toISOString())
         .order('transaction_date', { ascending: false });
+      
+      console.log('Transactions data:', data);
+      console.log('Transactions error:', error);
       
       if (error) throw error;
       return data as Transaction[];

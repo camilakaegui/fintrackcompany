@@ -152,19 +152,14 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Panel de Admin</h1>
-            <p className="text-muted-foreground">Gestiona la lista de espera</p>
-          </div>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver al Dashboard
-          </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Panel de Admin</h1>
+          <p className="text-muted-foreground">Gestiona la lista de espera</p>
         </div>
+      </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -281,7 +276,6 @@ const AdminPage = () => {
           )}
         </div>
       </div>
-    </div>
   );
 };
 

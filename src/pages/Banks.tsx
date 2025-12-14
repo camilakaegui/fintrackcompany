@@ -1,44 +1,155 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Building2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Mock data for Colombian banks
-const AVAILABLE_BANKS = [
-  { id: '1', name: 'Bancolombia', slug: 'bancolombia', logo: '🏦' },
-  { id: '2', name: 'Nequi', slug: 'nequi', logo: '💜' },
-  { id: '3', name: 'Daviplata', slug: 'daviplata', logo: '🔴' },
-  { id: '4', name: 'Nu Colombia', slug: 'nu', logo: '💜' },
-  { id: '5', name: 'Lulo Bank', slug: 'lulo', logo: '🟡' },
-  { id: '6', name: 'Rappipay', slug: 'rappipay', logo: '🧡' },
-  { id: '7', name: 'BBVA', slug: 'bbva', logo: '🔵' },
-  { id: '8', name: 'Banco de Bogotá', slug: 'bancodebogota', logo: '🏛️' },
-];
+interface PaymentProvider {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+}
+
+interface UserProvider {
+  id: string;
+  provider_id: string;
+  payment_providers: PaymentProvider;
+}
 
 const BanksPage = () => {
-  const [userBanks, setUserBanks] = useState<typeof AVAILABLE_BANKS>([]);
+  const { user } = useAuth();
+  const [userBanks, setUserBanks] = useState<UserProvider[]>([]);
+  const [availableBanks, setAvailableBanks] = useState<PaymentProvider[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddBank = (bank: typeof AVAILABLE_BANKS[0]) => {
-    if (userBanks.find(b => b.id === bank.id)) {
+  useEffect(() => {
+    console.log('User:', user);
+    console.log('User ID:', user?.id);
+    if (user?.id) {
+      fetchUserBanks();
+      fetchAvailableBanks();
+    }
+  }, [user?.id]);
+
+  const fetchUserBanks = async () => {
+    console.log('Fetching user banks for:', user?.id);
+    const { data, error } = await supabase
+      .from('user_providers')
+      .select(`
+        id,
+        provider_id,
+        payment_providers:provider_id (id, name, slug, logo_url)
+      `)
+      .eq('user_id', user?.id)
+      .eq('is_active', true);
+    
+    console.log('User banks data:', data);
+    console.log('User banks error:', error);
+    
+    if (!error && data) {
+      setUserBanks(data as unknown as UserProvider[]);
+    }
+    setLoading(false);
+  };
+
+  const fetchAvailableBanks = async () => {
+    console.log('Fetching available banks...');
+    const { data, error } = await supabase
+      .from('payment_providers')
+      .select('*')
+      .eq('is_active', true);
+    
+    console.log('Available banks data:', data);
+    console.log('Available banks error:', error);
+    
+    if (!error && data) {
+      setAvailableBanks(data);
+    }
+  };
+
+  const handleAddBank = async (bank: PaymentProvider) => {
+    if (userBanks.find(b => b.provider_id === bank.id)) {
       toast.error('Este banco ya está conectado');
       return;
     }
-    setUserBanks([...userBanks, bank]);
+
+    const { error } = await supabase
+      .from('user_providers')
+      .insert({
+        user_id: user?.id,
+        provider_id: bank.id,
+        is_active: true
+      });
+
+    if (error) {
+      console.error('Error adding bank:', error);
+      toast.error('Error al conectar banco');
+      return;
+    }
+
+    await fetchUserBanks();
     setShowAddModal(false);
     toast.success(`${bank.name} conectado`);
   };
 
-  const handleRemoveBank = (bankId: string) => {
-    setUserBanks(userBanks.filter(b => b.id !== bankId));
+  const handleRemoveBank = async (userProviderId: string) => {
+    const { error } = await supabase
+      .from('user_providers')
+      .update({ is_active: false })
+      .eq('id', userProviderId);
+
+    if (error) {
+      console.error('Error removing bank:', error);
+      toast.error('Error al desconectar banco');
+      return;
+    }
+
+    await fetchUserBanks();
     toast.success('Banco desconectado');
   };
 
-  const availableToAdd = AVAILABLE_BANKS.filter(b => !userBanks.find(ub => ub.id === b.id));
+  const availableToAdd = availableBanks.filter(
+    b => !userBanks.find(ub => ub.provider_id === b.id)
+  );
+
+  const getBankEmoji = (slug: string) => {
+    const emojis: Record<string, string> = {
+      bancolombia: '🏦',
+      nequi: '💜',
+      daviplata: '🔴',
+      nu: '💜',
+      lulo: '🟡',
+      rappipay: '🧡',
+      bbva: '🔵',
+      bancodebogota: '🏛️',
+    };
+    return emojis[slug] || '🏦';
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Mis Bancos</h1>
+            <p className="text-muted-foreground">Administra tus bancos conectados</p>
+          </div>
+        </div>
+        <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-card border border-border rounded-2xl p-4 h-20" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Mis Bancos</h1>
@@ -59,10 +170,14 @@ const BanksPage = () => {
               className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4"
             >
               <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-2xl">
-                {bank.logo}
+                {bank.payment_providers?.logo_url ? (
+                  <img src={bank.payment_providers.logo_url} alt="" className="w-8 h-8" />
+                ) : (
+                  getBankEmoji(bank.payment_providers?.slug || '')
+                )}
               </div>
               <div className="flex-1">
-                <p className="text-foreground font-medium">{bank.name}</p>
+                <p className="text-foreground font-medium">{bank.payment_providers?.name}</p>
                 <p className="text-muted-foreground text-sm">Conectado</p>
               </div>
               <Button 
@@ -102,13 +217,21 @@ const BanksPage = () => {
                 onClick={() => handleAddBank(bank)}
                 className="p-4 rounded-xl border border-border hover:border-primary bg-muted/50 hover:bg-muted transition-colors text-left"
               >
-                <span className="text-2xl block mb-2">{bank.logo}</span>
+                <span className="text-2xl block mb-2">
+                  {bank.logo_url ? (
+                    <img src={bank.logo_url} alt="" className="w-8 h-8" />
+                  ) : (
+                    getBankEmoji(bank.slug)
+                  )}
+                </span>
                 <span className="text-foreground text-sm font-medium">{bank.name}</span>
               </button>
             ))}
             {availableToAdd.length === 0 && (
               <p className="col-span-2 text-muted-foreground text-center py-4">
-                Ya tienes todos los bancos conectados
+                {availableBanks.length === 0 
+                  ? 'No hay bancos disponibles' 
+                  : 'Ya tienes todos los bancos conectados'}
               </p>
             )}
           </div>

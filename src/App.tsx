@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
@@ -45,7 +46,9 @@ const App = () => (
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -53,7 +56,9 @@ const App = () => (
               path="/transactions"
               element={
                 <ProtectedRoute>
-                  <TransactionsPage />
+                  <DashboardLayout>
+                    <TransactionsPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -61,7 +66,9 @@ const App = () => (
               path="/reports"
               element={
                 <ProtectedRoute>
-                  <ReportsPage />
+                  <DashboardLayout>
+                    <ReportsPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -69,7 +76,9 @@ const App = () => (
               path="/banks"
               element={
                 <ProtectedRoute>
-                  <BanksPage />
+                  <DashboardLayout>
+                    <BanksPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -77,15 +86,9 @@ const App = () => (
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/access-pending"
-              element={
-                <ProtectedRoute>
-                  <AccessPending />
+                  <DashboardLayout>
+                    <SettingsPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -93,10 +96,13 @@ const App = () => (
               path="/admin"
               element={
                 <ProtectedRoute>
-                  <AdminPage />
+                  <DashboardLayout>
+                    <AdminPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
+            <Route path="/access-pending" element={<AccessPending />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

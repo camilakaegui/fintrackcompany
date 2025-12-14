@@ -16,6 +16,8 @@ import TransactionsPage from "./pages/Transactions";
 import ReportsPage from "./pages/Reports";
 import BanksPage from "./pages/Banks";
 import SettingsPage from "./pages/Settings";
+import AccessPending from "./pages/AccessPending";
+import AdminPage from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +78,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/access-pending"
+              element={
+                <ProtectedRoute>
+                  <AccessPending />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
                 </ProtectedRoute>
               }
             />
